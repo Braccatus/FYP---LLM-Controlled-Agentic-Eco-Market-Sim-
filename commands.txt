@@ -1,0 +1,15 @@
+COMMAND 1: NAVIGATE TO FOLDER
+
+cd "C:\Users\maxim\OneDrive\Desktop\FYP - LLM Controlled Eco Market Sim"
+
+COMMAND 2: ACTIVATE THE VIRTUAL ENVIRONMENT (VENV)
+
+.venv\Scripts\activate
+
+COMMAND 3: RUN THE AGENT
+
+python agent.py
+
+RUN THE NET LOGO TEST:
+
+python test_netlogo_bridge.py

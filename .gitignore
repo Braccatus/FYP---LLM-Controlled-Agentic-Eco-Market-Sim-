@@ -1,0 +1,5 @@
+.env 
+.venv/ 
+__pycache__/ 
+*.png 
+mcp_server.log 
