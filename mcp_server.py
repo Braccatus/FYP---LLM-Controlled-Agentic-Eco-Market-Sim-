@@ -34,14 +34,6 @@ from plotter import plot_economy
 from netlogo_bridge import run_wealth_distribution
 from netlogo_plotter import plot_wealth_distribution
 
-import logging
-logging.basicConfig(
-    filename="mcp_server.log",
-    level=logging.INFO,
-    format="%(asctime)s %(message)s",
-)
-logging.info("MCP server started")
-
 mcp = FastMCP("toy-macro-market-sim")
 
 
@@ -95,22 +87,35 @@ def run_and_plot(
     )
 
     # Derive a human-readable title from the filename
-    # e.g. "pandemic_stimulus_simulation.png" -> "Pandemic Stimulus Simulation"
     base = os.path.splitext(os.path.basename(filename))[0]
     title = base.replace("_", " ").title()
 
-    # Generate and save the plot
-    plot_economy(
-        results["series_price"],
-        results["series_demand"],
-        results["series_spread"],
+    # Generate multi-sector plot
+    from plotter import plot_multisector
+    plot_multisector(
+        sector_series=results["sector_series"],
+        market_avg_series=results["series_market_avg"],
+        demand_series=results["series_demand"],
+        spread_series=results["series_spread"],
         filename=filename,
         title=title,
     )
 
-    # Return only the compact summary — drop large series arrays
-    summary = {k: v for k, v in results.items() if not k.startswith("series_")}
-    summary["plot_saved_to"] = os.path.abspath(filename)
+    # Return compact summary — drop large series arrays
+    summary = {
+        "interest_rate":           results["interest_rate"],
+        "steps":                   results["steps"],
+        "average_demand":          results["average_demand"],
+        "recession_steps":         results["recession_steps"],
+        "overheating_steps":       results["overheating_steps"],
+        "max_credit_spread":       results["max_credit_spread"],
+        "min_credit_spread":       results["min_credit_spread"],
+        "market_average_final":    results["market_average_final"],
+        "market_average_price":    results["market_average_price"],
+        "market_price_volatility": results["market_price_volatility"],
+        "sector_summary":          results["sector_summary"],
+        "plot_saved_to":           os.path.abspath(filename),
+    }
 
     return summary
 
@@ -155,8 +160,19 @@ def run_macro_simulation(
         fiscal_shock=fiscal_shock,
     )
 
-    # Return only compact summary
-    return {k: v for k, v in results.items() if not k.startswith("series_")}
+    return {
+        "interest_rate":           results["interest_rate"],
+        "steps":                   results["steps"],
+        "average_demand":          results["average_demand"],
+        "recession_steps":         results["recession_steps"],
+        "overheating_steps":       results["overheating_steps"],
+        "max_credit_spread":       results["max_credit_spread"],
+        "min_credit_spread":       results["min_credit_spread"],
+        "market_average_final":    results["market_average_final"],
+        "market_average_price":    results["market_average_price"],
+        "market_price_volatility": results["market_price_volatility"],
+        "sector_summary":          results["sector_summary"],
+    }
 
 
 # ── Advanced Tool: Average Multiple Runs ─────────────────────────────────────
@@ -257,7 +273,7 @@ def run_netlogo_wealth(
     life_expectancy_max: int = 83,
     grain_growth_interval: int = 1,
     num_grain_grown: int = 4,
-    steps: int = 50,
+    steps: int = 200,
 ) -> Dict[str, Any]:
     """
     Run the NetLogo Wealth Distribution agent-based model.
@@ -313,7 +329,7 @@ def run_netlogo_wealth_plot(
     life_expectancy_max: int = 83,
     grain_growth_interval: int = 1,
     num_grain_grown: int = 4,
-    steps: int = 50,
+    steps: int = 200,
     filename: str = "netlogo_wealth.png",
 ) -> Dict[str, Any]:
     """

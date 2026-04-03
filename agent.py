@@ -86,12 +86,20 @@ These model individual agent behaviour and wealth inequality emergence.
 - fiscal_shock: -1 (severe austerity) to +1 (strong stimulus)
 - steps: integer 50–300
 
+── MACRO SIMULATION OUTPUTS ──
+The macro simulation returns results for 5 sectors:
+- Commodities, Technology, Healthcare, Crypto, Financials
+- Each sector has: final_price, average_price, price_volatility
+- Plus a market_average across all sectors
+- Each sector responds differently to shocks based on its sensitivity profile
+- When interpreting results, discuss which sectors were most/least affected and why
+
 ── NETLOGO PARAMETER GUIDANCE ──
 - percent_best_land: 1–25 (higher = more productive economy / better infrastructure)
 - num_grain_grown: 1–10 (higher = more generous welfare / resource availability)
 - metabolism_max: 1–25 (higher = higher cost of living)
 - num_people: 10–500 (population size)
-- steps: always use 50 for NetLogo — it is slow to initialise
+- steps: 50–500 (NetLogo runs are slower, keep to 200 unless more detail needed)
 
 Be autonomous. Infer all parameters from the scenario — never ask the user.
 Think step by step. After each tool call reflect on results before deciding what to do next.
