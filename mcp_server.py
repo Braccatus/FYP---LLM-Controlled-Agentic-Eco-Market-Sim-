@@ -273,33 +273,37 @@ def run_netlogo_wealth(
     life_expectancy_max: int = 83,
     grain_growth_interval: int = 1,
     num_grain_grown: int = 4,
-    steps: int = 200,
+    steps: int = 100,
 ) -> Dict[str, Any]:
     """
-    Run the NetLogo Wealth Distribution agent-based model.
+    Run the NetLogo Wealth Distribution agent-based model (single run, no plot).
+    Use run_netlogo_wealth_multiple for statistically meaningful results.
 
-    Use this tool when the scenario involves:
-    - Wealth inequality or redistribution
-    - Effects of policy on different income classes
-    - Resource scarcity or abundance
-    - Agent-level economic behaviour and emergence
+    PARAMETER MAPPING GUIDE — always reason about these from the scenario:
+        num_people:           Population size (10-500). Default 250.
+        max_vision:           How far agents can see resources (1-10).
+                              Higher = better market information / less friction.
+                              Lower = information asymmetry, restricted markets.
+        metabolism_max:       Max resource consumption per agent per step (1-25).
+                              Higher = higher cost of living / inflation.
+                              Lower = low cost of living environment.
+        percent_best_land:    % of patches with high grain yield (1-25).
+                              Higher = more productive economy / better infrastructure.
+                              Lower = resource scarcity / poor infrastructure.
+        life_expectancy_min:  Minimum agent lifespan (1-10). Usually keep at 1.
+        life_expectancy_max:  Maximum agent lifespan (20-100).
+                              Higher = longer productive careers / wealth accumulation.
+                              Lower = shorter productive lifespans.
+        grain_growth_interval: How often grain regrows (1-10).
+                              Lower = faster resource regeneration / stronger economy.
+                              Higher = slower recovery / resource depletion.
+        num_grain_grown:      How much grain regrows each interval (1-10).
+                              Higher = generous welfare / abundant resources.
+                              Lower = welfare cuts / resource scarcity.
+        steps:                Simulation length (50-300). Use 100 for standard runs.
 
-    How parameters map to economic scenarios:
-        percent_best_land:    Higher = more productive economy / better infrastructure
-        num_grain_grown:      Higher = more generous welfare / resource availability
-        metabolism_max:       Higher = higher cost of living / consumption
-        num_people:           Population size
-        max_vision:           Agent awareness / market information access
-        life_expectancy_max:  Higher = longer productive lifespans
-
-    Returns:
-        final_gini:       Gini coefficient at end (0=equal, 100=totally unequal)
-        average_gini:     Average Gini over the simulation
-        max_gini:         Peak inequality reached
-        min_gini:         Lowest inequality reached
-        low_class_final:  Number of agents in low wealth class at end
-        mid_class_final:  Number of agents in middle wealth class at end
-        up_class_final:   Number of agents in upper wealth class at end
+    Returns: final_gini, average_gini, max_gini, min_gini,
+             low_class_final, mid_class_final, up_class_final
     """
     results = run_wealth_distribution(
         num_people=num_people,
@@ -312,15 +316,13 @@ def run_netlogo_wealth(
         num_grain_grown=num_grain_grown,
         steps=steps,
     )
-
-    # Return compact summary only
     return {k: v for k, v in results.items() if not k.endswith("_history")}
 
 
-# ── NetLogo Tool: Wealth Distribution with Plot ───────────────────────────────
+# ── NetLogo Tool: Multiple Runs with Variance Analysis ───────────────────────
 
 @mcp.tool()
-def run_netlogo_wealth_plot(
+def run_netlogo_wealth_multiple(
     num_people: int = 250,
     max_vision: int = 5,
     metabolism_max: int = 15,
@@ -329,50 +331,131 @@ def run_netlogo_wealth_plot(
     life_expectancy_max: int = 83,
     grain_growth_interval: int = 1,
     num_grain_grown: int = 4,
-    steps: int = 200,
+    steps: int = 100,
+    n_runs: int = 3,
     filename: str = "netlogo_wealth.png",
 ) -> Dict[str, Any]:
     """
-    Run the NetLogo Wealth Distribution model AND generate a plot.
+    PRIMARY NETLOGO TOOL. Run the Wealth Distribution model N times and return
+    averaged results plus variance analysis. Generates a plot.
 
-    Use this as the PRIMARY NetLogo tool. Generates a chart showing:
-    - Gini coefficient over time
-    - Low / mid / upper class agent counts over time
+    Running multiple times accounts for the randomness in agent behaviour —
+    each run produces slightly different outcomes. Averaging gives statistically
+    more reliable results and variance shows how stable the outcome is.
 
-    Same parameters as run_netlogo_wealth, plus:
-        filename: Name of the PNG file to save the chart to
+    Use this tool for ALL NetLogo simulations. Always reason about parameters
+    from the economic scenario rather than using defaults.
 
-    Returns compact summary plus plot_saved_to path.
+    PARAMETER MAPPING GUIDE:
+        num_grain_grown:      welfare generosity (higher = more generous)
+        percent_best_land:    economic productivity / infrastructure quality
+        metabolism_max:       cost of living / inflation pressure
+        max_vision:           market information access / transparency
+        life_expectancy_max:  productive lifespan / retirement age effects
+        n_runs:               use 3 for standard, 5 for high-uncertainty scenarios
+
+    Returns:
+        mean_final_gini:      average Gini at end across all runs
+        std_final_gini:       standard deviation of final Gini (measures variability)
+        mean_average_gini:    average Gini over time across all runs
+        mean_low_class:       average low class count at end
+        mean_mid_class:       average mid class count at end
+        mean_up_class:        average upper class count at end
+        n_runs:               number of runs performed
+        parameter_reasoning:  explanation of why parameters were chosen
+        plot_saved_to:        path to saved chart
     """
-    results = run_wealth_distribution(
-        num_people=num_people,
-        max_vision=max_vision,
-        metabolism_max=metabolism_max,
-        percent_best_land=percent_best_land,
-        life_expectancy_min=life_expectancy_min,
-        life_expectancy_max=life_expectancy_max,
-        grain_growth_interval=grain_growth_interval,
-        num_grain_grown=num_grain_grown,
-        steps=steps,
-    )
+    import math
 
-    # Generate plot
-    base = os.path.splitext(os.path.basename(filename))[0]
-    title = base.replace("_", " ").title()
+    n_runs = max(2, min(int(n_runs), 5))
+
+    all_final_gini   = []
+    all_average_gini = []
+    all_low          = []
+    all_mid          = []
+    all_up           = []
+    all_gini_history = []
+    all_low_history  = []
+    all_mid_history  = []
+    all_up_history   = []
+
+    for run_num in range(n_runs):
+        r = run_wealth_distribution(
+            num_people=num_people,
+            max_vision=max_vision,
+            metabolism_max=metabolism_max,
+            percent_best_land=percent_best_land,
+            life_expectancy_min=life_expectancy_min,
+            life_expectancy_max=life_expectancy_max,
+            grain_growth_interval=grain_growth_interval,
+            num_grain_grown=num_grain_grown,
+            steps=steps,
+        )
+        all_final_gini.append(r["final_gini"])
+        all_average_gini.append(r["average_gini"])
+        all_low.append(r["low_class_final"])
+        all_mid.append(r["mid_class_final"])
+        all_up.append(r["up_class_final"])
+        all_gini_history.append(r["gini_history"])
+        all_low_history.append(r["low_class_history"])
+        all_mid_history.append(r["mid_class_history"])
+        all_up_history.append(r["up_class_history"])
+
+    # Average the time series
+    avg_gini = [sum(run[i] for run in all_gini_history) / n_runs for i in range(steps)]
+    avg_low  = [sum(run[i] for run in all_low_history)  / n_runs for i in range(steps)]
+    avg_mid  = [sum(run[i] for run in all_mid_history)  / n_runs for i in range(steps)]
+    avg_up   = [sum(run[i] for run in all_up_history)   / n_runs for i in range(steps)]
+
+    # Compute statistics
+    mean_final_gini   = round(sum(all_final_gini) / n_runs, 4)
+    mean_average_gini = round(sum(all_average_gini) / n_runs, 4)
+    mean_low          = round(sum(all_low) / n_runs, 1)
+    mean_mid          = round(sum(all_mid) / n_runs, 1)
+    mean_up           = round(sum(all_up)  / n_runs, 1)
+
+    # Standard deviation of final Gini across runs
+    variance = sum((g - mean_final_gini) ** 2 for g in all_final_gini) / n_runs
+    std_final_gini = round(math.sqrt(variance), 4)
+
+    # Generate plot of averaged results
+    base  = os.path.splitext(os.path.basename(filename))[0]
+    title = base.replace("_", " ").title() + f" (Averaged {n_runs} Runs)"
 
     plot_wealth_distribution(
-        gini_history=results["gini_history"],
-        low_history=results["low_class_history"],
-        mid_history=results["mid_class_history"],
-        up_history=results["up_class_history"],
+        gini_history=avg_gini,
+        low_history=avg_low,
+        mid_history=avg_mid,
+        up_history=avg_up,
         filename=filename,
         title=title,
     )
 
-    summary = {k: v for k, v in results.items() if not k.endswith("_history")}
-    summary["plot_saved_to"] = os.path.abspath(filename)
+    return {
+        "n_runs":             n_runs,
+        "steps":              steps,
+        "mean_final_gini":    mean_final_gini,
+        "std_final_gini":     std_final_gini,
+        "mean_average_gini":  mean_average_gini,
+        "mean_low_class":     mean_low,
+        "mean_mid_class":     mean_mid,
+        "mean_up_class":      mean_up,
+        "all_final_gini":     all_final_gini,
+        "parameters": {
+            "num_people":            num_people,
+            "max_vision":            max_vision,
+            "metabolism_max":        metabolism_max,
+            "percent_best_land":     percent_best_land,
+            "life_expectancy_min":   life_expectancy_min,
+            "life_expectancy_max":   life_expectancy_max,
+            "grain_growth_interval": grain_growth_interval,
+            "num_grain_grown":       num_grain_grown,
+        },
+        "plot_saved_to": os.path.abspath(filename),
+    }
 
-    return summary
+
+
 
 
 # ── Entry Point ───────────────────────────────────────────────────────────────
