@@ -274,36 +274,39 @@ def run_netlogo_wealth(
     grain_growth_interval: int = 1,
     num_grain_grown: int = 4,
     steps: int = 100,
+    tax_rate: float = 0.0,
+    redistribution_rate: float = 0.0,
+    welfare_boost: float = 0.0,
+    policy_description: str = "",
 ) -> Dict[str, Any]:
     """
     Run the NetLogo Wealth Distribution agent-based model (single run, no plot).
     Use run_netlogo_wealth_multiple for statistically meaningful results.
 
-    PARAMETER MAPPING GUIDE — always reason about these from the scenario:
-        num_people:           Population size (10-500). Default 250.
-        max_vision:           How far agents can see resources (1-10).
-                              Higher = better market information / less friction.
-                              Lower = information asymmetry, restricted markets.
-        metabolism_max:       Max resource consumption per agent per step (1-25).
-                              Higher = higher cost of living / inflation.
-                              Lower = low cost of living environment.
-        percent_best_land:    % of patches with high grain yield (1-25).
-                              Higher = more productive economy / better infrastructure.
-                              Lower = resource scarcity / poor infrastructure.
-        life_expectancy_min:  Minimum agent lifespan (1-10). Usually keep at 1.
-        life_expectancy_max:  Maximum agent lifespan (20-100).
-                              Higher = longer productive careers / wealth accumulation.
-                              Lower = shorter productive lifespans.
-        grain_growth_interval: How often grain regrows (1-10).
-                              Lower = faster resource regeneration / stronger economy.
-                              Higher = slower recovery / resource depletion.
-        num_grain_grown:      How much grain regrows each interval (1-10).
-                              Higher = generous welfare / abundant resources.
-                              Lower = welfare cuts / resource scarcity.
-        steps:                Simulation length (50-300). Use 100 for standard runs.
+    STANDARD PARAMETER MAPPING:
+        num_people (10-500):        Population size.
+        max_vision (1-10):          Market information access. Lower = restricted markets.
+        metabolism_max (1-25):      Cost of living. Higher = inflation/high living costs.
+        percent_best_land (1-25):   Economic productivity. Lower = poor infrastructure.
+        life_expectancy_max (20-100): Productive lifespan effects.
+        num_grain_grown (1-10):     Welfare generosity. Lower = welfare cuts.
+        steps (50-300):             Simulation length.
+
+    POLICY INJECTION PARAMETERS — inject behavioural rules into the model:
+        tax_rate (0-50):            % of wealth taken from upper class (rich) agents
+                                    each tick. Use for progressive taxation scenarios.
+                                    Example: tax_rate=30 for extreme wealth tax.
+        redistribution_rate (0-100): % of collected tax given back to poor agents.
+                                    Use with tax_rate for redistribution policies.
+                                    Example: redistribution_rate=80 for generous redistribution.
+        welfare_boost (0-10):       Flat grain bonus given to every poor agent each tick.
+                                    Use for direct welfare payment scenarios.
+                                    Example: welfare_boost=3 for direct payments to poor.
+        policy_description:         Brief description of the policy being applied.
 
     Returns: final_gini, average_gini, max_gini, min_gini,
-             low_class_final, mid_class_final, up_class_final
+             low_class_final, mid_class_final, up_class_final,
+             policy_active, tax_rate, redistribution_rate, welfare_boost
     """
     results = run_wealth_distribution(
         num_people=num_people,
@@ -315,6 +318,10 @@ def run_netlogo_wealth(
         grain_growth_interval=grain_growth_interval,
         num_grain_grown=num_grain_grown,
         steps=steps,
+        tax_rate=tax_rate,
+        redistribution_rate=redistribution_rate,
+        welfare_boost=welfare_boost,
+        policy_description=policy_description,
     )
     return {k: v for k, v in results.items() if not k.endswith("_history")}
 
@@ -334,6 +341,10 @@ def run_netlogo_wealth_multiple(
     steps: int = 100,
     n_runs: int = 3,
     filename: str = "netlogo_wealth.png",
+    tax_rate: float = 0.0,
+    redistribution_rate: float = 0.0,
+    welfare_boost: float = 0.0,
+    policy_description: str = "",
 ) -> Dict[str, Any]:
     """
     PRIMARY NETLOGO TOOL. Run the Wealth Distribution model N times and return
@@ -343,10 +354,7 @@ def run_netlogo_wealth_multiple(
     each run produces slightly different outcomes. Averaging gives statistically
     more reliable results and variance shows how stable the outcome is.
 
-    Use this tool for ALL NetLogo simulations. Always reason about parameters
-    from the economic scenario rather than using defaults.
-
-    PARAMETER MAPPING GUIDE:
+    STANDARD PARAMETER MAPPING:
         num_grain_grown:      welfare generosity (higher = more generous)
         percent_best_land:    economic productivity / infrastructure quality
         metabolism_max:       cost of living / inflation pressure
@@ -354,16 +362,25 @@ def run_netlogo_wealth_multiple(
         life_expectancy_max:  productive lifespan / retirement age effects
         n_runs:               use 3 for standard, 5 for high-uncertainty scenarios
 
+    POLICY INJECTION — use these to directly modify agent behaviour rules:
+        tax_rate (0-50):          % wealth removed from upper class agents each tick.
+                                  Use for wealth tax / progressive taxation scenarios.
+        redistribution_rate (0-100): % of tax revenue redistributed to poor agents.
+                                  Use with tax_rate for redistribution policies.
+        welfare_boost (0-10):     Flat grain bonus to every poor agent each tick.
+                                  Use for direct welfare payment scenarios.
+        policy_description:       Brief description of the policy injected.
+
+    WHEN TO USE POLICY PARAMETERS:
+        - "extreme tax on the rich" → tax_rate=30-40, redistribution_rate=80-100
+        - "universal basic income" → welfare_boost=3-5
+        - "wealth redistribution programme" → tax_rate=20, redistribution_rate=100
+        - "no policy intervention" → leave all at 0 (default)
+
     Returns:
-        mean_final_gini:      average Gini at end across all runs
-        std_final_gini:       standard deviation of final Gini (measures variability)
-        mean_average_gini:    average Gini over time across all runs
-        mean_low_class:       average low class count at end
-        mean_mid_class:       average mid class count at end
-        mean_up_class:        average upper class count at end
-        n_runs:               number of runs performed
-        parameter_reasoning:  explanation of why parameters were chosen
-        plot_saved_to:        path to saved chart
+        mean_final_gini, std_final_gini, mean_average_gini,
+        mean_low_class, mean_mid_class, mean_up_class,
+        n_runs, policy_active, plot_saved_to
     """
     import math
 
@@ -390,6 +407,10 @@ def run_netlogo_wealth_multiple(
             grain_growth_interval=grain_growth_interval,
             num_grain_grown=num_grain_grown,
             steps=steps,
+            tax_rate=tax_rate,
+            redistribution_rate=redistribution_rate,
+            welfare_boost=welfare_boost,
+            policy_description=policy_description,
         )
         all_final_gini.append(r["final_gini"])
         all_average_gini.append(r["average_gini"])
@@ -451,7 +472,12 @@ def run_netlogo_wealth_multiple(
             "grain_growth_interval": grain_growth_interval,
             "num_grain_grown":       num_grain_grown,
         },
-        "plot_saved_to": os.path.abspath(filename),
+        "policy_active":       tax_rate > 0 or redistribution_rate > 0 or welfare_boost > 0,
+        "tax_rate":            tax_rate,
+        "redistribution_rate": redistribution_rate,
+        "welfare_boost":       welfare_boost,
+        "policy_description":  policy_description,
+        "plot_saved_to":       os.path.abspath(filename),
     }
 
 

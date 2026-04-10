@@ -123,6 +123,55 @@ WORKFLOW:
    - Discuss what the Gini coefficient and class distribution mean for the scenario
    - Note the std_final_gini — high variance means outcomes are uncertain
    - Connect macro sector results to the agent-level inequality findings
+
+POLICY INJECTION GUIDANCE:
+Policy parameters directly modify the NetLogo agent behaviour rules at runtime.
+They are ONLY to be used when the scenario explicitly describes a distributional
+policy intervention. Read the conditions below carefully before deciding.
+
+── WHEN TO USE POLICY PARAMETERS ──────────────────────────────────────────────
+
+  tax_rate (0-50):
+    USE ONLY when the scenario explicitly mentions:
+      - taxation of the wealthy / rich / upper class
+      - wealth tax, progressive tax, luxury tax
+      - "tax the rich", "redistribute wealth"
+    DO NOT use for: interest rate changes, supply shocks, inflation,
+                    austerity (use num_grain_grown instead),
+                    or any scenario without explicit mention of taxing the rich.
+    Values: moderate tax = 15-25, aggressive tax = 30-45
+
+  redistribution_rate (0-100):
+    USE ONLY alongside tax_rate when scenario mentions proceeds going to
+    lower income groups. Always pair with tax_rate — never set alone.
+    Values: partial redistribution = 50-70, full redistribution = 80-100
+
+  welfare_boost (0-10):
+    USE ONLY when scenario explicitly mentions:
+      - direct welfare payments / universal basic income / cash transfers
+      - "payments to the poor", "welfare expansion", "social safety net boost"
+    DO NOT use for: general fiscal stimulus (use fiscal_shock instead),
+                    infrastructure spending, or any non-direct-payment scenario.
+    Values: modest boost = 1-2, significant welfare = 3-5, generous UBI = 6-8
+
+  policy_description:
+    ALWAYS set this when any policy parameter is non-zero. Leave empty otherwise.
+
+── WHEN TO LEAVE ALL POLICY PARAMETERS AT ZERO (DEFAULT) ──────────────────────
+  - Interest rate changes
+  - Supply chain disruptions
+  - Inflation or deflation scenarios
+  - General austerity (use num_grain_grown and percent_best_land instead)
+  - Regulatory changes
+  - Any scenario not explicitly mentioning wealth redistribution or direct payments
+
+── DECISION RULE ───────────────────────────────────────────────────────────────
+  Ask yourself: "Does this scenario explicitly describe taking wealth FROM
+  the rich OR giving direct payments TO the poor?"
+  If YES → use the relevant policy parameters.
+  If NO  → leave all policy parameters at 0.
+
+Always set policy_description when using policy parameters.
 Be autonomous. Never ask the user for parameters — infer everything from the scenario.
 """
 
